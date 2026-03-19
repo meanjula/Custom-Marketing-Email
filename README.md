@@ -1,16 +1,137 @@
-# React + Vite
+# MailCraft — Custom Marketing Email
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Mailchimp-inspired campaign email builder built with React + Vite. Create, manage, and send custom marketing emails with a clean dashboard UI.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+| Tool | Version | Purpose |
+|---|---|---|
+| React | 19 | UI framework |
+| Vite | 8 | Build tool & dev server |
+| react-router-dom | 7 | Client-side routing |
+| react-hook-form | 7 | Form state management |
+| React Context + useReducer | — | App state (no Redux) |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+npm run dev
+```
+
+App runs at `http://localhost:5173`
+
+---
+
+## Pages & Routes
+
+| Route | Description |
+|---|---|
+| `/` | Redirects to `/campaigns` |
+| `/campaigns` | Campaign dashboard (list view) |
+| `/campaigns/create` | Create new campaign |
+| `/campaigns/edit/:id` | Edit existing draft campaign |
+
+---
+
+## Features
+
+### Campaign Dashboard (`/campaigns`)
+- Stats cards — Total, Sent, and Draft counts
+- Search by campaign name or subject
+- Filter by status (All / Draft / Sent)
+- Sortable columns — click any header to sort asc/desc
+- **Draft campaigns** — Edit (pencil) + Delete buttons
+- **Sent campaigns** — Copy (duplicate) button; delete disabled
+- Inline delete confirmation row
+- Empty state with call-to-action
+
+### Create / Edit Form (`/campaigns/create`)
+
+**Step 1 — Campaign Details**
+- Campaign Name (required)
+- Email Subject (required)
+- CC Emails — tag input, validates format, add with Enter or comma
+
+**Step 2 — Recipients** (3-mode toggle)
+- **From Customers** — searchable multi-select dropdown
+- **Upload Excel** — `.xlsx / .xls / .csv` file upload area
+- **Enter Manually** — tag email input
+
+**Step 3 — Email Content**
+- Text editor (textarea with character count)
+- Design Builder tab — placeholder for the drag-and-drop template builder (coming soon)
+
+**Sidebar**
+- Live summary panel showing current field values
+
+**Actions**
+- Send Campaign — saves with `status: 1` (sent)
+- Save as Draft — saves with `status: 0` (draft)
+- Cancel — resets form and returns to dashboard
+- Success snackbar with auto-redirect
+
+---
+
+## Project Structure
+
+```
+src/
+├── context/
+│   ├── campaignContextInstance.js   # React context object
+│   ├── CampaignContext.jsx          # CampaignProvider component + reducer
+│   └── useCampaign.js               # useCampaign() hook
+├── data/
+│   └── fakeData.js                  # Fake campaigns + customers (swap for API later)
+├── components/
+│   ├── layout/
+│   │   ├── Header.jsx / Header.css
+│   │   └── Layout.jsx / Layout.css
+│   └── campaignEmail/
+│       ├── emailList.component.jsx  # Dashboard table
+│       ├── emailRow.component.jsx   # Single campaign row
+│       ├── createEmail.component.jsx# Create/edit form page
+│       ├── customersEmailOption.jsx # Recipient selector (3 modes)
+│       ├── TagInput.jsx             # Reusable tag/chip email input
+│       └── CampaignEmail.css        # All campaign styles
+├── containers/
+│   └── campaignEmail/
+│       ├── EmailListContainer.jsx
+│       └── campaignEmail.container.jsx
+└── App.jsx                          # Router + provider setup
+```
+
+---
+
+## State Shape (`CampaignContext`)
+
+```js
+{
+  campaigns: [],              // All campaigns (fake data or API)
+  campaignDetails: null,      // Campaign loaded for edit/copy
+  isToEdit: false,
+  isToCopy: false,
+  isToDelete: false,
+  isToDeleteEmailId: null,
+  showSnackBar: false,        // Send success notification
+  showDraftSnackBar: false,   // Draft saved notification
+  template_content: '',       // Saved HTML from design builder
+  templateCreated: null,      // Timestamp of saved design
+  templateValues: null,       // Widget array (drag-and-drop)
+  droppedElements: null,
+}
+```
+
+---
+
+## Roadmap
+
+- [ ] Drag-and-drop email template builder
+- [ ] Rich text editor (Quill / TipTap)
+- [ ] API integration (replace fake data)
+- [ ] Email preview overlay
+- [ ] Social icon widget support

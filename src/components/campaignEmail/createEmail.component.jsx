@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { useCampaign } from '../../context/CampaignContext';
+import { useCampaign } from '../../context/useCampaign';
 import CustomersEmailOption from './customersEmailOption.component';
 import TagInput from './TagInput';
 import './CampaignEmail.css';
@@ -28,7 +28,7 @@ export default function CreateEmailComponent() {
     reset,
     watch,
     setValue,
-    formState: { errors, isDirty },
+    formState: { errors },
   } = methods;
 
   const contentValue = watch('Content');

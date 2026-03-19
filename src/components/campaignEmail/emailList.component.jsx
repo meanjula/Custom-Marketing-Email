@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCampaign } from '../../context/CampaignContext';
+import { useCampaign } from '../../context/useCampaign';
 import EmailRow from './emailRow.component';
 import './CampaignEmail.css';
 
@@ -30,8 +30,8 @@ export default function EmailListComponent() {
   const filtered = state.campaigns
     .filter((c) => {
       const matchSearch =
-        c.name.toLowerCase().includes(search.toLowerCase()) ||
-        c.subject.toLowerCase().includes(search.toLowerCase());
+        (c.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (c.subject ?? '').toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === '' || String(c.status) === statusFilter;
       return matchSearch && matchStatus;
     })

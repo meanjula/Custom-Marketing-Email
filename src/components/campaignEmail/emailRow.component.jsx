@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { useCampaign } from '../../context/CampaignContext';
+import { useCampaign } from '../../context/useCampaign';
 
 const STATUS_LABEL = { 0: 'Draft', 1: 'Sent' };
 const STATUS_CLASS = { 0: 'badge-draft', 1: 'badge-sent' };

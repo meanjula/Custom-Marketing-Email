@@ -1,5 +1,6 @@
-import { createContext, useContext, useReducer } from 'react';
+import { useReducer } from 'react';
 import { fakeCampaigns } from '../data/fakeData';
+import { CampaignContext } from './campaignContextInstance';
 
 const initialState = {
   campaigns: fakeCampaigns,
@@ -34,11 +35,14 @@ function campaignReducer(state, action) {
     }
 
     case 'SAVE_CAMPAIGN': {
+      const { Name, Subject, ...rest } = action.payload;
       const newCampaign = {
-        ...action.payload,
+        ...rest,
+        name: Name || '',
+        subject: Subject || '',
         id: Date.now(),
         created: new Date().toISOString(),
-        status: action.payload.status ?? 1,
+        status: 1,
       };
       return {
         ...state,
@@ -51,8 +55,11 @@ function campaignReducer(state, action) {
     }
 
     case 'SAVE_DRAFT': {
+      const { Name, Subject, ...rest } = action.payload;
       const draftCampaign = {
-        ...action.payload,
+        ...rest,
+        name: Name || '',
+        subject: Subject || '',
         id: Date.now(),
         created: new Date().toISOString(),
         status: 0,
@@ -68,8 +75,11 @@ function campaignReducer(state, action) {
     }
 
     case 'UPDATE_CAMPAIGN': {
+      const { Name, Subject, ...rest } = action.payload;
       const updated = state.campaigns.map((c) =>
-        c.id === action.payload.id ? { ...c, ...action.payload } : c
+        c.id === rest.id
+          ? { ...c, ...rest, name: Name || c.name, subject: Subject || c.subject }
+          : c
       );
       return {
         ...state,
@@ -114,8 +124,6 @@ function campaignReducer(state, action) {
   }
 }
 
-const CampaignContext = createContext(null);
-
 export function CampaignProvider({ children }) {
   const [state, dispatch] = useReducer(campaignReducer, initialState);
   return (
@@ -123,10 +131,4 @@ export function CampaignProvider({ children }) {
       {children}
     </CampaignContext.Provider>
   );
-}
-
-export function useCampaign() {
-  const ctx = useContext(CampaignContext);
-  if (!ctx) throw new Error('useCampaign must be used inside CampaignProvider');
-  return ctx;
 }
