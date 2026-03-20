@@ -12,6 +12,7 @@ A Mailchimp-inspired campaign email builder built with React + Vite. Create, man
 | Vite | 8 | Build tool & dev server |
 | react-router-dom | 7 | Client-side routing |
 | react-hook-form | 7 | Form state management |
+| TinyMCE + @tinymce/tinymce-react | 7 | Rich text editor with image upload |
 | React Context + useReducer | — | App state (no Redux) |
 
 ---
@@ -63,7 +64,9 @@ App runs at `http://localhost:5173`
 - **Enter Manually** — tag email input
 
 **Step 3 — Email Content**
-- Text editor (textarea with character count)
+- TinyMCE rich text editor — bold, italic, headings, lists, links, text/background colour, alignment, blockquote, HR, source view, fullscreen
+- Image support — upload from device (embedded as base64) or insert by URL, with caption
+- Character count (strips HTML tags)
 - Design Builder tab — placeholder for the drag-and-drop template builder (coming soon)
 
 **Sidebar**
@@ -82,27 +85,30 @@ App runs at `http://localhost:5173`
 ```
 src/
 ├── context/
-│   ├── campaignContextInstance.js   # React context object
-│   ├── CampaignContext.jsx          # CampaignProvider component + reducer
-│   └── useCampaign.js               # useCampaign() hook
+│   ├── campaignContextInstance.js        # React context object
+│   ├── CampaignContext.jsx               # CampaignProvider component + reducer
+│   └── useCampaign.js                    # useCampaign() hook
 ├── data/
-│   └── fakeData.js                  # Fake campaigns + customers (swap for API later)
+│   └── fakeData.js                       # Fake campaigns + customers (swap for API later)
 ├── components/
 │   ├── layout/
 │   │   ├── Header.jsx / Header.css
 │   │   └── Layout.jsx / Layout.css
+│   ├── inputs/
+│   │   ├── textEditor.jsx                # TinyMCE rich text editor (self-hosted)
+│   │   └── TextEditor.css
 │   └── campaignEmail/
-│       ├── emailList.component.jsx  # Dashboard table
-│       ├── emailRow.component.jsx   # Single campaign row
-│       ├── createEmail.component.jsx# Create/edit form page
-│       ├── customersEmailOption.jsx # Recipient selector (3 modes)
-│       ├── TagInput.jsx             # Reusable tag/chip email input
-│       └── CampaignEmail.css        # All campaign styles
+│       ├── emailList.component.jsx       # Dashboard table
+│       ├── emailRow.component.jsx        # Single campaign row
+│       ├── createEmail.component.jsx     # Create/edit form page
+│       ├── customersEmailOption.component.jsx  # Recipient selector (3 modes)
+│       ├── TagInput.jsx                  # Reusable tag/chip email input
+│       └── CampaignEmail.css             # All campaign styles
 ├── containers/
 │   └── campaignEmail/
 │       ├── EmailListContainer.jsx
 │       └── campaignEmail.container.jsx
-└── App.jsx                          # Router + provider setup
+└── App.jsx                               # Router + provider setup
 ```
 
 ---
@@ -130,8 +136,11 @@ src/
 
 ## Roadmap
 
+- [x] Campaign dashboard (list, search, filter, sort)
+- [x] Create / Edit / Copy / Draft campaign flows
+- [x] Recipient selector (customers, Excel upload, manual entry)
+- [x] TinyMCE rich text editor with image upload
 - [ ] Drag-and-drop email template builder
-- [ ] Rich text editor (Quill / TipTap)
 - [ ] API integration (replace fake data)
 - [ ] Email preview overlay
 - [ ] Social icon widget support

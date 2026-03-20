@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCampaign } from '../../context/useCampaign';
 import CustomersEmailOption from './customersEmailOption.component';
 import TagInput from './TagInput';
+import TextEditor from '../inputs/textEditor';
 import './CampaignEmail.css';
 
 const defaultValues = {
@@ -184,15 +185,13 @@ export default function CreateEmailComponent() {
                       <button
                         type="button"
                         className={`content-tab ${!state.templateCreated ? 'active' : ''}`}
-                        onClick={() => {
-                          dispatch({ type: 'RESET_FORM' });
-                        }}
+                        onClick={() => dispatch({ type: 'RESET_FORM' })}
                       >
-                        ✏️ Text Editor
+                        ✏️ Rich Text Editor
                       </button>
                       <button
                         type="button"
-                        className={`content-tab ${state.templateCreated ? 'active' : ''}`}
+                        className="content-tab"
                         onClick={() => navigate('/campaigns/design')}
                       >
                         🎨 Design Builder
@@ -202,14 +201,18 @@ export default function CreateEmailComponent() {
 
                     {!state.templateCreated ? (
                       <div className="form-field">
-                        <textarea
-                          className="form-textarea"
-                          rows={10}
-                          placeholder="Write your email body here…"
-                          {...register('Content')}
+                        <TextEditor
+                          value={contentValue || ''}
+                          onChange={(html) => setValue('Content', html, { shouldDirty: true })}
+                          placeholder="Write your email content here…"
+                          height={420}
                         />
                         <div className="textarea-footer">
-                          <span className="char-count">{(contentValue || '').length} characters</span>
+                          <span className="char-count">
+                            {contentValue
+                              ? contentValue.replace(/<[^>]*>/g, '').length
+                              : 0} characters
+                          </span>
                         </div>
                       </div>
                     ) : (
