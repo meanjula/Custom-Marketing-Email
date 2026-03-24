@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
+import { HiOutlineMail } from 'react-icons/hi';
 import './Header.css';
 
 export default function Header() {
@@ -8,7 +9,7 @@ export default function Header() {
     <header className="header">
       <div className="header-inner">
         <Link to="/campaigns" className="header-logo">
-          <span className="logo-icon">✉</span>
+          <span className="logo-icon"><HiOutlineMail /></span>
           <span className="logo-text">MailCraft</span>
         </Link>
 

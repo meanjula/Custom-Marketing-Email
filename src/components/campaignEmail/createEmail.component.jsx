@@ -1,5 +1,12 @@
 import { useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
+import {
+  HiOutlinePencilAlt,
+  HiOutlineTrash,
+  HiOutlineSave,
+  HiOutlineArrowLeft,
+} from 'react-icons/hi';
+import { FcTemplate } from 'react-icons/fc';
 import { useNavigate } from 'react-router-dom';
 import { useCampaign } from '../../context/useCampaign';
 import CustomersEmailOption from './customersEmailOption.component';
@@ -9,11 +16,10 @@ import './CampaignEmail.css';
 
 const defaultValues = {
   Name: '',
-  emailType: 0,
+  emailType: 1,
   Subject: '',
   CcEmails: [],
   Content: '',
-  from_customers_email: [],
   manual_emails: [],
 };
 
@@ -60,17 +66,15 @@ export default function CreateEmailComponent() {
   }, [showSnackBar, showDraftSnackBar, dispatch, navigate]);
 
   const onSubmit = (values) => {
-    const payload = { ...values, status: 1 };
     if (isToEdit && campaignDetails?.id && !isToCopy) {
-      dispatch({ type: 'UPDATE_CAMPAIGN', payload: { ...payload, id: campaignDetails.id } });
+      dispatch({ type: 'UPDATE_CAMPAIGN', payload: { ...values, id: campaignDetails.id } });
     } else {
-      dispatch({ type: 'SAVE_CAMPAIGN', payload });
+      dispatch({ type: 'SAVE_CAMPAIGN', payload: values });
     }
   };
 
-  const onSaveDraft = () => {
-    const values = methods.getValues();
-    dispatch({ type: 'SAVE_DRAFT', payload: values });
+  const handleSaveAsDraft = () => {
+    dispatch({ type: 'SAVE_CAMPAIGN_EMAIL_AS_DRAFT' });
   };
 
   const handleCancel = () => {
@@ -79,7 +83,7 @@ export default function CreateEmailComponent() {
   };
 
   const pageTitle = isToEdit ? 'Edit Campaign' : isToCopy ? 'Copy Campaign' : 'Create Campaign';
-  const submitLabel = isToEdit ? 'Update Campaign' : 'Send Campaign';
+  const submitLabel = isToEdit ? 'Update & Send' : 'Send Campaign';
 
   return (
     <FormProvider {...methods}>
@@ -102,7 +106,7 @@ export default function CreateEmailComponent() {
             </p>
           </div>
           <button type="button" className="btn btn-ghost" onClick={handleCancel}>
-            ← Back to Campaigns
+            <HiOutlineArrowLeft /> Back to Campaigns
           </button>
         </div>
 
@@ -187,14 +191,14 @@ export default function CreateEmailComponent() {
                         className={`content-tab ${!state.templateCreated ? 'active' : ''}`}
                         onClick={() => dispatch({ type: 'RESET_FORM' })}
                       >
-                        ✏️ Rich Text Editor
+                        <HiOutlinePencilAlt /> Rich Text Editor
                       </button>
                       <button
                         type="button"
                         className="content-tab"
                         onClick={() => navigate('/campaigns/design')}
                       >
-                        🎨 Design Builder
+                        <FcTemplate /> Design Builder
                         <span className="tab-badge">Coming Soon</span>
                       </button>
                     </div>
@@ -217,7 +221,7 @@ export default function CreateEmailComponent() {
                       </div>
                     ) : (
                       <div className="template-saved-indicator">
-                        <span className="template-icon">🎨</span>
+                        <span className="template-icon"><FcTemplate /></span>
                         <div>
                           <p className="template-saved-text">Template design saved</p>
                           <p className="template-saved-time">{state.templateCreated}</p>
@@ -230,7 +234,7 @@ export default function CreateEmailComponent() {
                             dispatch({ type: 'RESET_FORM' });
                           }}
                         >
-                          🗑 Remove Design
+                          <HiOutlineTrash /> Remove Design
                         </button>
                       </div>
                     )}
@@ -250,7 +254,7 @@ export default function CreateEmailComponent() {
                   <SummaryItem label="Subject" value={watch('Subject') || '—'} />
                   <SummaryItem
                     label="Recipients"
-                    value={recipientSummary(watch('emailType'), watch('from_customers_email'), watch('manual_emails'))}
+                    value={recipientSummary(watch('emailType'), watch('manual_emails'))}
                   />
                   <SummaryItem
                     label="CC"
@@ -267,15 +271,13 @@ export default function CreateEmailComponent() {
                 <button type="submit" className="btn btn-primary btn-full">
                   {submitLabel}
                 </button>
-                {!isToEdit && (
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-full"
-                    onClick={onSaveDraft}
-                  >
-                    💾 Save as Draft
-                  </button>
-                )}
+                <button
+                  type="submit"
+                  className="btn btn-secondary btn-full"
+                  onClick={handleSaveAsDraft}
+                >
+                  <HiOutlineSave /> Save as Draft
+                </button>
                 <button
                   type="button"
                   className="btn btn-ghost btn-full"
@@ -301,9 +303,8 @@ function SummaryItem({ label, value }) {
   );
 }
 
-function recipientSummary(emailType, fromCustomers, manualEmails) {
-  const type = Number(emailType ?? 0);
-  if (type === 0) return fromCustomers?.length ? `${fromCustomers.length} customer(s)` : '—';
+function recipientSummary(emailType, manualEmails) {
+  const type = Number(emailType ?? 1);
   if (type === 1) return 'Excel upload';
   if (type === 2) return manualEmails?.length ? `${manualEmails.length} address(es)` : '—';
   return '—';

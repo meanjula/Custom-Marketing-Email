@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { HiOutlinePencil, HiOutlineDocumentDuplicate, HiOutlineTrash } from 'react-icons/hi';
 import { useCampaign } from '../../context/useCampaign';
 
 const STATUS_LABEL = { 0: 'Draft', 1: 'Sent' };
@@ -36,10 +37,10 @@ export default function EmailRow({ campaign }) {
   return (
     <>
       <tr className={`table-row ${confirmingDelete ? 'row-danger' : ''}`}>
-        <td className="td td-name">
+        <td className="td">
           <span className="campaign-name">{name}</span>
         </td>
-        <td className="td td-subject">
+        <td className="td">
           <span className="campaign-subject">{subject}</span>
         </td>
         <td className="td">
@@ -51,11 +52,11 @@ export default function EmailRow({ campaign }) {
         <td className="td td-actions">
           {status === 0 ? (
             <button className="action-btn edit-btn" title="Edit" onClick={handleEdit}>
-              ✏️
+              <HiOutlinePencil />
             </button>
           ) : (
             <button className="action-btn copy-btn" title="Copy" onClick={handleCopy}>
-              📋
+              <HiOutlineDocumentDuplicate />
             </button>
           )}
           <button
@@ -64,7 +65,7 @@ export default function EmailRow({ campaign }) {
             onClick={handleWarnDelete}
             style={status === 1 ? { opacity: 0.4, pointerEvents: 'none' } : {}}
           >
-            🗑️
+            <HiOutlineTrash />
           </button>
         </td>
       </tr>

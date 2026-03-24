@@ -7,6 +7,7 @@ const initialState = {
   campaignDetails: null,
   isToEdit: false,
   isToCopy: false,
+  isSaveNotificationEmailAsDraft: false,
   isToDelete: false,
   isToDeleteEmailId: null,
   showSnackBar: false,
@@ -34,40 +35,26 @@ function campaignReducer(state, action) {
       return { ...state, campaignDetails: { ...campaign, id: null }, isToCopy: true, isToEdit: false };
     }
 
+    case 'SAVE_CAMPAIGN_EMAIL_AS_DRAFT':
+      return { ...state, isSaveNotificationEmailAsDraft: true };
+
     case 'SAVE_CAMPAIGN': {
       const { Name, Subject, ...rest } = action.payload;
+      const isDraft = state.isSaveNotificationEmailAsDraft;
       const newCampaign = {
         ...rest,
         name: Name || '',
         subject: Subject || '',
         id: Date.now(),
         created: new Date().toISOString(),
-        status: 1,
+        status: isDraft ? 0 : 1,
       };
       return {
         ...state,
         campaigns: [newCampaign, ...state.campaigns],
-        showSnackBar: true,
-        campaignDetails: null,
-        isToEdit: false,
-        isToCopy: false,
-      };
-    }
-
-    case 'SAVE_DRAFT': {
-      const { Name, Subject, ...rest } = action.payload;
-      const draftCampaign = {
-        ...rest,
-        name: Name || '',
-        subject: Subject || '',
-        id: Date.now(),
-        created: new Date().toISOString(),
-        status: 0,
-      };
-      return {
-        ...state,
-        campaigns: [draftCampaign, ...state.campaigns],
-        showDraftSnackBar: true,
+        showSnackBar: !isDraft,
+        showDraftSnackBar: isDraft,
+        isSaveNotificationEmailAsDraft: false,
         campaignDetails: null,
         isToEdit: false,
         isToCopy: false,
@@ -76,15 +63,18 @@ function campaignReducer(state, action) {
 
     case 'UPDATE_CAMPAIGN': {
       const { Name, Subject, ...rest } = action.payload;
+      const isDraft = state.isSaveNotificationEmailAsDraft;
       const updated = state.campaigns.map((c) =>
         c.id === rest.id
-          ? { ...c, ...rest, name: Name || c.name, subject: Subject || c.subject }
+          ? { ...c, ...rest, name: Name || c.name, subject: Subject || c.subject, status: isDraft ? 0 : 1 }
           : c
       );
       return {
         ...state,
         campaigns: updated,
-        showSnackBar: true,
+        showSnackBar: !isDraft,
+        showDraftSnackBar: isDraft,
+        isSaveNotificationEmailAsDraft: false,
         campaignDetails: null,
         isToEdit: false,
       };
@@ -105,7 +95,7 @@ function campaignReducer(state, action) {
       };
 
     case 'CLOSE_SNACKBAR':
-      return { ...state, showSnackBar: false, showFailSnackBar: false, showDraftSnackBar: false };
+      return { ...state, showSnackBar: false, showFailSnackBar: false, showDraftSnackBar: false, isSaveNotificationEmailAsDraft: false };
 
     case 'RESET_FORM':
       return {
@@ -113,6 +103,7 @@ function campaignReducer(state, action) {
         campaignDetails: null,
         isToEdit: false,
         isToCopy: false,
+        isSaveNotificationEmailAsDraft: false,
         template_content: '',
         templateCreated: null,
         templateValues: null,
