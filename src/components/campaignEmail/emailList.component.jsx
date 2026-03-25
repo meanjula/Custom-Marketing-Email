@@ -68,7 +68,7 @@ export default function EmailListComponent() {
 
       {/* Stats row */}
       <div className="stats-row">
-        <StatCard label="Total" value={state.campaigns.length} icon="📧" />
+        <StatCard label="Total" value={state.campaigns.length} icon="📧" color="blue"/>
         <StatCard label="Sent" value={sentCount} icon="✅" color="green" />
         <StatCard label="Drafts" value={draftCount} icon="📝" color="orange" />
       </div>
