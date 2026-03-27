@@ -8,7 +8,14 @@ import {
 } from 'react-icons/hi';
 import { FcTemplate } from 'react-icons/fc';
 import { useNavigate } from 'react-router-dom';
-import { useCampaign } from '../../context/useCampaign';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  saveCampaign,
+  updateCampaign,
+  saveCampaignEmailAsDraft,
+  closeSnackbar,
+  resetForm,
+} from '../../store/campaignSlice';
 import CustomersEmailOption from './customersEmailOption.component';
 import TagInput from './TagInput';
 import TextEditor from '../inputs/textEditor';
@@ -24,8 +31,9 @@ const defaultValues = {
 };
 
 export default function CreateEmailComponent() {
-  const { state, dispatch } = useCampaign();
-  const { isToEdit, isToCopy, campaignDetails, showSnackBar, showDraftSnackBar } = state;
+  const dispatch = useDispatch();
+  const { isToEdit, isToCopy, campaignDetails, showSnackBar, showDraftSnackBar, templateCreated } =
+    useSelector((state) => state.campaign);
   const navigate = useNavigate();
 
   const methods = useForm({ defaultValues });
@@ -58,7 +66,7 @@ export default function CreateEmailComponent() {
   useEffect(() => {
     if (showSnackBar || showDraftSnackBar) {
       const timer = setTimeout(() => {
-        dispatch({ type: 'CLOSE_SNACKBAR' });
+        dispatch(closeSnackbar());
         navigate('/campaigns');
       }, 1800);
       return () => clearTimeout(timer);
@@ -67,18 +75,18 @@ export default function CreateEmailComponent() {
 
   const onSubmit = (values) => {
     if (isToEdit && campaignDetails?.id && !isToCopy) {
-      dispatch({ type: 'UPDATE_CAMPAIGN', payload: { ...values, id: campaignDetails.id } });
+      dispatch(updateCampaign({ ...values, id: campaignDetails.id }));
     } else {
-      dispatch({ type: 'SAVE_CAMPAIGN', payload: values });
+      dispatch(saveCampaign(values));
     }
   };
 
   const handleSaveAsDraft = () => {
-    dispatch({ type: 'SAVE_CAMPAIGN_EMAIL_AS_DRAFT' });
+    dispatch(saveCampaignEmailAsDraft());
   };
 
   const handleCancel = () => {
-    dispatch({ type: 'RESET_FORM' });
+    dispatch(resetForm());
     navigate('/campaigns');
   };
 
@@ -188,8 +196,8 @@ export default function CreateEmailComponent() {
                     <div className="content-tabs">
                       <button
                         type="button"
-                        className={`content-tab ${!state.templateCreated ? 'active' : ''}`}
-                        onClick={() => dispatch({ type: 'RESET_FORM' })}
+                        className={`content-tab ${!templateCreated ? 'active' : ''}`}
+                        onClick={() => dispatch(resetForm())}
                       >
                         <HiOutlinePencilAlt /> Rich Text Editor
                       </button>
@@ -203,7 +211,7 @@ export default function CreateEmailComponent() {
                       </button>
                     </div>
 
-                    {!state.templateCreated ? (
+                    {!templateCreated ? (
                       <div className="form-field">
                         <TextEditor
                           value={contentValue || ''}
@@ -224,14 +232,14 @@ export default function CreateEmailComponent() {
                         <span className="template-icon"><FcTemplate /></span>
                         <div>
                           <p className="template-saved-text">Template design saved</p>
-                          <p className="template-saved-time">{state.templateCreated}</p>
+                          <p className="template-saved-time">{templateCreated}</p>
                         </div>
                         <button
                           type="button"
                           className="btn btn-danger-ghost btn-sm"
                           onClick={() => {
                             setValue('Content', '');
-                            dispatch({ type: 'RESET_FORM' });
+                            dispatch(resetForm());
                           }}
                         >
                           <HiOutlineTrash /> Remove Design
@@ -262,7 +270,7 @@ export default function CreateEmailComponent() {
                   />
                   <SummaryItem
                     label="Content"
-                    value={state.templateCreated ? 'Template design' : (watch('Content') ? 'Text email' : '—')}
+                    value={templateCreated ? 'Template design' : (watch('Content') ? 'Text email' : '—')}
                   />
                 </div>
               </div>

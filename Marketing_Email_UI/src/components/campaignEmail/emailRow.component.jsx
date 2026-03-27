@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
 import { HiOutlinePencil, HiOutlineDocumentDuplicate, HiOutlineTrash } from 'react-icons/hi';
-import { useCampaign } from '../../context/useCampaign';
+import { editCampaign, copyCampaign, warnDelete, cancelDelete, removeCampaign } from '../../store/campaignSlice';
 
 const STATUS_LABEL = { 0: 'Draft', 1: 'Sent' };
 const STATUS_CLASS = { 0: 'badge-draft', 1: 'badge-sent' };
@@ -14,25 +15,26 @@ function formatDate(dateStr) {
 }
 
 export default function EmailRow({ campaign }) {
-  const { dispatch, state } = useCampaign();
+  const dispatch = useDispatch();
+  const { isToDelete, isToDeleteEmailId } = useSelector((state) => state.campaign);
   const navigate = useNavigate();
   const { id, name, subject, status, created } = campaign;
 
-  const confirmingDelete = state.isToDelete && state.isToDeleteEmailId === id;
+  const confirmingDelete = isToDelete && isToDeleteEmailId === id;
 
   const handleEdit = () => {
-    dispatch({ type: 'EDIT_CAMPAIGN', payload: id });
+    dispatch(editCampaign(id));
     navigate('/campaigns/create');
   };
 
   const handleCopy = () => {
-    dispatch({ type: 'COPY_CAMPAIGN', payload: id });
+    dispatch(copyCampaign(id));
     navigate('/campaigns/create');
   };
 
-  const handleWarnDelete = () => dispatch({ type: 'WARN_DELETE', payload: id });
-  const handleCancelDelete = () => dispatch({ type: 'CANCEL_DELETE' });
-  const handleConfirmDelete = () => dispatch({ type: 'REMOVE_CAMPAIGN', payload: id });
+  const handleWarnDelete = () => dispatch(warnDelete(id));
+  const handleCancelDelete = () => dispatch(cancelDelete());
+  const handleConfirmDelete = () => dispatch(removeCampaign(id));
 
   return (
     <>

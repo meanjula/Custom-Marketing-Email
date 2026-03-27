@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCampaign } from '../../context/useCampaign';
+import { useSelector } from 'react-redux';
 import EmailRow from './emailRow.component';
 import './CampaignEmail.css';
 
@@ -11,7 +11,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function EmailListComponent() {
-  const { state } = useCampaign();
+  const campaigns = useSelector((state) => state.campaign.campaigns);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -27,7 +27,7 @@ export default function EmailListComponent() {
     }
   };
 
-  const filtered = state.campaigns
+  const filtered = campaigns
     .filter((c) => {
       const matchSearch =
         (c.name ?? '').toLowerCase().includes(search.toLowerCase()) ||
@@ -50,8 +50,8 @@ export default function EmailListComponent() {
     return <span className="sort-icon active">{sortDir === 'asc' ? '↑' : '↓'}</span>;
   };
 
-  const sentCount = state.campaigns.filter((c) => c.status === 1).length;
-  const draftCount = state.campaigns.filter((c) => c.status === 0).length;
+  const sentCount = campaigns.filter((c) => c.status === 1).length;
+  const draftCount = campaigns.filter((c) => c.status === 0).length;
 
   return (
     <div className="email-list-page">
@@ -68,7 +68,7 @@ export default function EmailListComponent() {
 
       {/* Stats row */}
       <div className="stats-row">
-        <StatCard label="Total" value={state.campaigns.length} icon="📧" color="blue"/>
+        <StatCard label="Total" value={campaigns.length} icon="📧" color="blue"/>
         <StatCard label="Sent" value={sentCount} icon="✅" color="green" />
         <StatCard label="Drafts" value={draftCount} icon="📝" color="orange" />
       </div>
@@ -139,7 +139,7 @@ export default function EmailListComponent() {
             </tbody>
           </table>
           <div className="table-footer">
-            Showing {filtered.length} of {state.campaigns.length} campaigns
+            Showing {filtered.length} of {campaigns.length} campaigns
           </div>
         </div>
       )}
