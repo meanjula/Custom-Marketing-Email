@@ -1,21 +1,21 @@
-import express from "express"
-import cors from "cors"
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import campaignRoutes from './src/routes/campaigns.js';
 
 const app = express();
-const corsOptions = {
-  origin: "http://localhost:5173", // Allow requests from this origin
-  credentials: true, // Allow cookies and credentials
-};
-app.use(cors(corsOptions))
-app.use(express.json())
 
+app.use(helmet());
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(express.json());
 
-// Health check route
-app.get("/", (req,res)=>{
-    res.send("Server is running! Use POST /api/chat to interact.");
-})
+app.use('/api/campaigns', campaignRoutes);
+
+app.get('/', (_req, res) => {
+  res.json({ status: 'ok', message: 'Marketing Email API is running' });
+});
 
 const PORT = 3000;
-app.listen(PORT,()=>{
-    console.log(`Server running on port http://localhost:${PORT}`);
-})
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
