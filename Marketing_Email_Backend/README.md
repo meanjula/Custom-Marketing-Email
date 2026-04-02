@@ -169,9 +169,19 @@ npm install --save-dev nodemon
 
 ---
 
+## Step 6 — Connect the React frontend
+
+- Created `src/services/campaignApi.js` in the frontend — a thin `fetch` wrapper with a `request()` helper that handles JSON headers, non-OK responses, and `204 No Content`
+- Replaced sync Redux reducers (`saveCampaign`, `updateCampaign`, `removeCampaign`) with `createAsyncThunk` actions: `fetchCampaigns`, `createCampaign`, `updateCampaignAsync`, `deleteCampaign`
+- Added `loading` and `error` fields to Redux state
+- `emailList` dispatches `fetchCampaigns()` on mount and shows loading/error states
+- `createEmail` dispatches `createCampaign` or `updateCampaignAsync` on form submit
+- `emailRow` dispatches `deleteCampaign` on confirm delete
+
+---
+
 ## Next Steps
 
-- [ ] Connect the React frontend (Redux thunks → API calls)
 - [ ] Replace fake DB with a real database (e.g. PostgreSQL / MongoDB)
 - [ ] Add authentication middleware
 - [ ] Add input validation (e.g. `zod` or `express-validator`)

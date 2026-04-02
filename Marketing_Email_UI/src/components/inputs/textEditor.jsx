@@ -43,8 +43,7 @@ export default function TextEditor({
   return (
     <div className={`tinymce-wrapper ${disabled ? 'tinymce-disabled' : ''}`}>
       <Editor
-        tinymceScriptSrc="/tinymce/tinymce.min.js"
-        licenseKey="gpl"
+        apiKey={import.meta.env.VITE_TINYMCE_API_KEY}
         onInit={(_, editor) => { editorRef.current = editor; }}
         value={value}
         onEditorChange={(content) => onChange?.(content)}

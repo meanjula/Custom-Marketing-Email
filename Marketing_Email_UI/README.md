@@ -6,18 +6,22 @@ A Mailchimp-inspired campaign email builder built with React + Vite. Create, man
 
 ## Tech Stack
 
-| Tool | Version | Purpose |
-|---|---|---|
-| React | 19 | UI framework |
-| Vite | 8 | Build tool & dev server |
-| react-router-dom | 7 | Client-side routing |
-| react-hook-form | 7 | Form state management |
-| TinyMCE + @tinymce/tinymce-react | 7 | Rich text editor with image upload |
-| React Context + useReducer | — | App state (no Redux) |
+| Tool | Purpose |
+|---|---|
+| React 19 | UI framework |
+| Vite 8 | Build tool & dev server |
+| Redux Toolkit | Global state management |
+| react-redux | Redux bindings for React |
+| react-router-dom 7 | Client-side routing |
+| react-hook-form 7 | Form state management |
+| react-icons | Icon library (Heroicons, Flat Color) |
+| TinyMCE + @tinymce/tinymce-react | Rich text editor |
 
 ---
 
 ## Getting Started
+
+> Make sure the backend server is running first — see `Marketing_Email_Backend/README.md`
 
 ```bash
 npm install
@@ -42,6 +46,7 @@ App runs at `http://localhost:5173`
 ## Features
 
 ### Campaign Dashboard (`/campaigns`)
+- Fetches campaigns from the backend API on mount
 - Stats cards — Total, Sent, and Draft counts
 - Search by campaign name or subject
 - Filter by status (All / Draft / Sent)
@@ -49,32 +54,31 @@ App runs at `http://localhost:5173`
 - **Draft campaigns** — Edit (pencil) + Delete buttons
 - **Sent campaigns** — Copy (duplicate) button; delete disabled
 - Inline delete confirmation row
-- Empty state with call-to-action
+- Loading and error states
 
-### Create / Edit Form (`/campaigns/create`)
+### Create / Edit / Copy Form (`/campaigns/create`)
 
 **Step 1 — Campaign Details**
 - Campaign Name (required)
 - Email Subject (required)
-- CC Emails — tag input, validates format, add with Enter or comma
+- CC Emails — tag input, validates email format, add with Enter or comma
 
-**Step 2 — Recipients** (3-mode toggle)
-- **From Customers** — searchable multi-select dropdown
+**Step 2 — Recipients**
 - **Upload Excel** — `.xlsx / .xls / .csv` file upload area
 - **Enter Manually** — tag email input
 
 **Step 3 — Email Content**
-- TinyMCE rich text editor — bold, italic, headings, lists, links, text/background colour, alignment, blockquote, HR, source view, fullscreen
-- Image support — upload from device (embedded as base64) or insert by URL, with caption
+- TinyMCE rich text editor — bold, italic, headings, lists, links, colours, alignment, source view, fullscreen
+- Image support — upload from device or insert by URL
 - Character count (strips HTML tags)
-- Design Builder tab — placeholder for the drag-and-drop template builder (coming soon)
+- Design Builder tab — placeholder (coming soon)
 
 **Sidebar**
 - Live summary panel showing current field values
 
 **Actions**
-- Send Campaign — saves with `status: 1` (sent)
-- Save as Draft — saves with `status: 0` (draft)
+- Send Campaign — saves with `status: 1`
+- Save as Draft — saves with `status: 0`
 - Cancel — resets form and returns to dashboard
 - Success snackbar with auto-redirect
 
@@ -84,12 +88,13 @@ App runs at `http://localhost:5173`
 
 ```
 src/
-├── context/
-│   ├── campaignContextInstance.js        # React context object
-│   ├── CampaignContext.jsx               # CampaignProvider component + reducer
-│   └── useCampaign.js                    # useCampaign() hook
+├── store/
+│   ├── index.js                          # Redux store (configureStore)
+│   └── campaignSlice.js                  # Slice — reducers + async thunks
+├── services/
+│   └── campaignApi.js                    # Fetch wrapper for backend API
 ├── data/
-│   └── fakeData.js                       # Fake campaigns + customers (swap for API later)
+│   └── fakeData.js                       # Seed data (customers only, campaigns from API)
 ├── components/
 │   ├── layout/
 │   │   ├── Header.jsx / Header.css
@@ -100,37 +105,51 @@ src/
 │   └── campaignEmail/
 │       ├── emailList.component.jsx       # Dashboard table
 │       ├── emailRow.component.jsx        # Single campaign row
-│       ├── createEmail.component.jsx     # Create/edit form page
-│       ├── customersEmailOption.component.jsx  # Recipient selector (3 modes)
+│       ├── createEmail.component.jsx     # Create/edit/copy form page
+│       ├── customersEmailOption.component.jsx  # Recipient selector
 │       ├── TagInput.jsx                  # Reusable tag/chip email input
 │       └── CampaignEmail.css             # All campaign styles
 ├── containers/
 │   └── campaignEmail/
 │       ├── EmailListContainer.jsx
 │       └── campaignEmail.container.jsx
-└── App.jsx                               # Router + provider setup
+├── context/                              # Legacy — no longer used
+└── App.jsx                               # Router setup
 ```
 
 ---
 
-## State Shape (`CampaignContext`)
+## Redux State Shape (`state.campaign`)
 
 ```js
 {
-  campaigns: [],              // All campaigns (fake data or API)
+  campaigns: [],              // Loaded from API
   campaignDetails: null,      // Campaign loaded for edit/copy
   isToEdit: false,
   isToCopy: false,
+  isSaveNotificationEmailAsDraft: false,
   isToDelete: false,
   isToDeleteEmailId: null,
-  showSnackBar: false,        // Send success notification
-  showDraftSnackBar: false,   // Draft saved notification
-  template_content: '',       // Saved HTML from design builder
-  templateCreated: null,      // Timestamp of saved design
-  templateValues: null,       // Widget array (drag-and-drop)
+  showSnackBar: false,
+  showDraftSnackBar: false,
+  showFailSnackBar: false,
+  loading: false,             // API fetch in progress
+  error: null,                // API error message
+  template_content: '',
+  templateCreated: null,
+  templateValues: null,
   droppedElements: null,
 }
 ```
+
+## Async Thunks (`store/campaignSlice.js`)
+
+| Thunk | Method | Endpoint |
+|---|---|---|
+| `fetchCampaigns` | GET | `/api/campaigns` |
+| `createCampaign` | POST | `/api/campaigns` |
+| `updateCampaignAsync` | PUT | `/api/campaigns/:id` |
+| `deleteCampaign` | DELETE | `/api/campaigns/:id` |
 
 ---
 
@@ -138,9 +157,10 @@ src/
 
 - [x] Campaign dashboard (list, search, filter, sort)
 - [x] Create / Edit / Copy / Draft campaign flows
-- [x] Recipient selector (customers, Excel upload, manual entry)
+- [x] Recipient selector (Excel upload, manual entry)
 - [x] TinyMCE rich text editor with image upload
+- [x] Redux Toolkit state management
+- [x] API integration (backend connected)
 - [ ] Drag-and-drop email template builder
-- [ ] API integration (replace fake data)
 - [ ] Email preview overlay
-- [ ] Social icon widget support
+- [ ] Authentication

@@ -10,8 +10,8 @@ import { FcTemplate } from 'react-icons/fc';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  saveCampaign,
-  updateCampaign,
+  createCampaign,
+  updateCampaignAsync,
   saveCampaignEmailAsDraft,
   closeSnackbar,
   resetForm,
@@ -75,9 +75,9 @@ export default function CreateEmailComponent() {
 
   const onSubmit = (values) => {
     if (isToEdit && campaignDetails?.id && !isToCopy) {
-      dispatch(updateCampaign({ ...values, id: campaignDetails.id }));
+      dispatch(updateCampaignAsync({ ...values, id: campaignDetails.id }));
     } else {
-      dispatch(saveCampaign(values));
+      dispatch(createCampaign(values));
     }
   };
 

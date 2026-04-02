@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchCampaigns } from '../../store/campaignSlice';
 import EmailRow from './emailRow.component';
 import './CampaignEmail.css';
 
@@ -11,8 +12,13 @@ const STATUS_OPTIONS = [
 ];
 
 export default function EmailListComponent() {
-  const campaigns = useSelector((state) => state.campaign.campaigns);
+  const dispatch = useDispatch();
+  const { campaigns, loading, error } = useSelector((state) => state.campaign);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    dispatch(fetchCampaigns());
+  }, [dispatch]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortField, setSortField] = useState('created');
@@ -52,6 +58,9 @@ export default function EmailListComponent() {
 
   const sentCount = campaigns.filter((c) => c.status === 1).length;
   const draftCount = campaigns.filter((c) => c.status === 0).length;
+
+  if (loading) return <div className="page-loading">Loading campaigns…</div>;
+  if (error) return <div className="page-error">Failed to load campaigns: {error}</div>;
 
   return (
     <div className="email-list-page">

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { HiOutlinePencil, HiOutlineDocumentDuplicate, HiOutlineTrash } from 'react-icons/hi';
-import { editCampaign, copyCampaign, warnDelete, cancelDelete, removeCampaign } from '../../store/campaignSlice';
+import { editCampaign, copyCampaign, warnDelete, cancelDelete, deleteCampaign } from '../../store/campaignSlice';
 
 const STATUS_LABEL = { 0: 'Draft', 1: 'Sent' };
 const STATUS_CLASS = { 0: 'badge-draft', 1: 'badge-sent' };
@@ -34,7 +34,7 @@ export default function EmailRow({ campaign }) {
 
   const handleWarnDelete = () => dispatch(warnDelete(id));
   const handleCancelDelete = () => dispatch(cancelDelete());
-  const handleConfirmDelete = () => dispatch(removeCampaign(id));
+  const handleConfirmDelete = () => dispatch(deleteCampaign(id));
 
   return (
     <>
