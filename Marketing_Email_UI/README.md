@@ -100,7 +100,7 @@ src/
 │   │   ├── Header.jsx / Header.css
 │   │   └── Layout.jsx / Layout.css
 │   ├── inputs/
-│   │   ├── textEditor.jsx                # TinyMCE rich text editor (self-hosted)
+│   │   ├── textEditor.jsx                # TinyMCE rich text editor (Cloud)
 │   │   └── TextEditor.css
 │   └── campaignEmail/
 │       ├── emailList.component.jsx       # Dashboard table
@@ -150,6 +150,80 @@ src/
 | `createCampaign` | POST | `/api/campaigns` |
 | `updateCampaignAsync` | PUT | `/api/campaigns/:id` |
 | `deleteCampaign` | DELETE | `/api/campaigns/:id` |
+
+---
+
+## Step-by-Step Build Process
+
+### Step 1 — Initialise the project
+Scaffolded with Vite using the React template:
+```bash
+npm create vite@latest Marketing_Email_UI -- --template react
+npm install
+```
+
+### Step 2 — Install dependencies
+```bash
+npm install react-router-dom react-hook-form
+npm install @tinymce/tinymce-react tinymce
+npm install react-icons
+npm install @reduxjs/toolkit react-redux
+```
+
+### Step 3 — Set up routing (`App.jsx`)
+- Wrapped the app with `BrowserRouter`
+- Defined four routes: `/`, `/campaigns`, `/campaigns/create`, `/campaigns/edit/:id`
+- Added `Layout` component wrapping all routes for shared header/nav
+
+### Step 4 — Build the campaign dashboard (`emailList.component.jsx`)
+- Rendered campaigns in a sortable table
+- Added search (by name/subject) and status filter
+- Added stat cards — Total, Sent, Draft counts
+- Each row rendered by `emailRow.component.jsx`
+
+### Step 5 — Build the create/edit form (`createEmail.component.jsx`)
+- Used `react-hook-form` with `FormProvider` for shared form context
+- Three-section layout: Campaign Details, Recipients, Email Content
+- Live summary sidebar using `watch()`
+- Send and Save as Draft actions
+- Edit/copy mode hydrates form from existing campaign data
+
+### Step 6 — Build recipient selector (`customersEmailOption.component.jsx`)
+- Two modes: Excel file upload and manual email entry
+- Manual entry uses `TagInput.jsx` — a reusable chip input with email validation
+- Mode controlled by `emailType` radio field
+
+### Step 7 — Add TinyMCE rich text editor (`textEditor.jsx`)
+- Integrated `@tinymce/tinymce-react` as a controlled component
+- Plugins: lists, link, image, code, fullscreen, table, media, and more
+- Image upload handler converts files to base64
+- Initially self-hosted from `public/tinymce/`, later switched to TinyMCE Cloud
+- API key stored in `.env` as `VITE_TINYMCE_API_KEY`
+
+### Step 8 — Add icons with react-icons
+- Replaced all emoji icons with `react-icons` (Heroicons + Flat Color)
+- Edit → `HiOutlinePencil`, Copy → `HiOutlineDocumentDuplicate`, Delete → `HiOutlineTrash`
+- Save → `HiOutlineSave`, Back → `HiOutlineArrowLeft`, Design → `FcTemplate`
+- Per-button hover colours added to CSS (blue/green/red)
+
+### Step 9 — Migrate state to Redux Toolkit
+- Replaced React Context + `useReducer` with Redux Toolkit `createSlice`
+- Created `src/store/campaignSlice.js` with all reducers and action creators
+- Created `src/store/index.js` with `configureStore`
+- Wrapped app with `<Provider store={store}>` in `main.jsx`
+- Removed `CampaignProvider` from `App.jsx`
+- Updated all components from `useCampaign()` to `useDispatch` + `useSelector`
+
+### Step 10 — Connect to the backend API
+- Created `src/services/campaignApi.js` — a `fetch` wrapper with error handling
+- Replaced sync Redux reducers with `createAsyncThunk` actions:
+  - `fetchCampaigns` — GET all campaigns on mount
+  - `createCampaign` — POST new campaign
+  - `updateCampaignAsync` — PUT update existing campaign
+  - `deleteCampaign` — DELETE campaign
+- Added `loading` and `error` state fields
+- `emailList` shows loading/error states while fetching
+- `campaigns` state starts empty and is populated from the API
 
 ---
 

@@ -1,6 +1,6 @@
 # Marketing Email — Backend API
 
-Express.js REST API for the Custom Marketing Email platform. Uses an in-memory fake database for development.
+Express.js REST API for the Custom Marketing Email platform. Uses PostgreSQL with Prisma ORM for persistent storage.
 
 ---
 
@@ -8,13 +8,24 @@ Express.js REST API for the Custom Marketing Email platform. Uses an in-memory f
 
 ```
 Marketing_Email_Backend/
-├── index.js               # Entry point — Express app setup
+├── index.js                    # Entry point — Express app setup
+├── prisma.config.ts            # Prisma configuration (DB connection)
 ├── package.json
+├── .env                        # Environment variables (git ignored)
+├── .env.example                # Template for required env vars
+├── prisma/
+│   ├── schema.prisma           # Database schema (Campaign model)
+│   ├── seed.js                 # Seed script — populates 5 sample campaigns
+│   └── migrations/             # Auto-generated SQL migration history
 └── src/
+    ├── lib/
+    │   └── prisma.js           # Shared Prisma client instance
     ├── db/
-    │   └── campaigns.js   # In-memory fake DB + CRUD helpers
+    │   └── campaigns.js        # CRUD helpers using Prisma
+    ├── generated/
+    │   └── prisma/             # Auto-generated Prisma client (do not edit)
     └── routes/
-        └── campaigns.js   # Campaign REST route handlers
+        └── campaigns.js        # Campaign REST route handlers
 ```
 
 ---
@@ -26,7 +37,19 @@ Marketing_Email_Backend/
 | `express` | HTTP server & routing |
 | `cors` | Allow requests from the frontend (localhost:5173) |
 | `helmet` | Set secure HTTP headers |
+| `prisma` | ORM — schema, migrations, query builder |
+| `@prisma/client` | Auto-generated type-safe DB client |
+| `@prisma/adapter-pg` | Prisma adapter for PostgreSQL (required by Prisma 7) |
+| `pg` | PostgreSQL driver |
+| `dotenv` | Load `.env` variables |
 | `nodemon` | Auto-restart on file changes (dev only) |
+
+---
+
+## Prerequisites
+
+- Node.js 18+
+- PostgreSQL running locally
 
 ---
 
@@ -38,7 +61,37 @@ Marketing_Email_Backend/
 npm install
 ```
 
-### 2. Start the development server
+### 2. Set up environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your PostgreSQL credentials:
+
+```env
+DATABASE_URL="postgresql://<user>@localhost:5432/marketing_email_db?schema=public"
+```
+
+### 3. Create the database
+
+```bash
+createdb marketing_email_db
+```
+
+### 4. Run migrations
+
+```bash
+npx prisma migrate dev
+```
+
+### 5. Seed the database
+
+```bash
+npm run seed
+```
+
+### 6. Start the development server
 
 ```bash
 npm run dev
@@ -48,11 +101,37 @@ Server runs at: `http://localhost:3000`
 
 ---
 
+## Available Scripts
+
+| Script | Command | Description |
+|---|---|---|
+| `dev` | `nodemon index.js` | Start server with auto-reload |
+| `start` | `node index.js` | Start server (production) |
+| `seed` | `node prisma/seed.js` | Seed DB with 5 sample campaigns |
+
+---
+
+## Database Schema
+
+```prisma
+model Campaign {
+  id            Int      @id @default(autoincrement())
+  name          String
+  subject       String
+  content       String?
+  status        Int      @default(1)
+  emailType     Int      @default(1)
+  ccEmails      String[] @default([])
+  manualEmails  String[] @default([])
+  created       DateTime @default(now())
+}
+```
+
+---
+
 ## API Endpoints
 
 Base URL: `http://localhost:3000/api`
-
-### Campaigns
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -76,9 +155,9 @@ Base URL: `http://localhost:3000/api`
     "status": 1,
     "content": "<p>Check out our summer deals!</p>",
     "emailType": 1,
-    "CcEmails": [],
-    "manual_emails": [],
-    "created": "2025-06-01T10:00:00Z"
+    "ccEmails": [],
+    "manualEmails": [],
+    "created": "2026-04-07T11:05:59.681Z"
   }
 ]
 ```
@@ -105,24 +184,21 @@ Response `201`:
   "name": "New Campaign",
   "subject": "Hello World",
   "status": 0,
-  "created": "2026-03-30T10:00:00.000Z"
+  "created": "2026-04-07T11:10:00.000Z"
 }
 ```
 
 #### PUT `/api/campaigns/:id`
-
-Request body: any fields to update.
-Returns the updated campaign object.
+Request body: any fields to update. Returns the updated campaign object.
 
 #### DELETE `/api/campaigns/:id`
-
 Returns `204 No Content` on success.
 
 ---
 
-## Status Codes
+## Status Values
 
-| Status | Meaning |
+| Value | Meaning |
 |---|---|
 | `0` | Draft |
 | `1` | Sent |
@@ -132,56 +208,47 @@ Returns `204 No Content` on success.
 ## Step-by-Step Build Process
 
 ### Step 1 — Initialise the project
-The project was bootstrapped with `npm init`. `"type": "module"` was set in `package.json` to use ES module syntax (`import`/`export`) throughout.
+Bootstrapped with `npm init`. Set `"type": "module"` for ES module syntax throughout.
 
 ### Step 2 — Install core packages
 ```bash
 npm install express cors helmet
 npm install --save-dev nodemon
 ```
-- **express** — web framework
-- **cors** — configured to allow `http://localhost:5173` (the Vite frontend)
-- **helmet** — adds security headers automatically
-- **nodemon** — watches for file changes and restarts the server in dev
 
 ### Step 3 — Set up the Express app (`index.js`)
-- Created the Express app instance
 - Applied `helmet()`, `cors()`, and `express.json()` middleware globally
-- Mounted the campaign router at `/api/campaigns`
-- Added a root health check at `GET /`
-- Started the server on port `3000`
+- Mounted campaign router at `/api/campaigns`
+- Added root health check at `GET /`
 
-### Step 4 — Create the fake in-memory database (`src/db/campaigns.js`)
+### Step 4 — Create fake in-memory database (`src/db/campaigns.js`)
 - Defined a `campaigns` array with 5 seed records
-- Exported helper functions: `getAll`, `getById`, `create`, `update`, `remove`
-- `create` auto-increments an `id` counter and stamps `created` with the current ISO timestamp
-- All operations mutate the in-memory array directly (no persistence between restarts)
+- Exported `getAll`, `getById`, `create`, `update`, `remove` helpers
+- Data lived in RAM — lost on every server restart
 
-### Step 5 — Build the campaign routes (`src/routes/campaigns.js`)
-- Created an Express `Router`
-- Implemented five handlers:
-  - `GET /` — returns all campaigns via `db.getAll()`
-  - `GET /:id` — returns one campaign or `404`
-  - `POST /` — validates `name` + `subject`, calls `db.create()`, responds `201`
-  - `PUT /:id` — merges request body into existing record or `404`
-  - `DELETE /:id` — removes record or `404`, responds `204`
-- Imported and mounted this router in `index.js`
+### Step 5 — Build campaign routes (`src/routes/campaigns.js`)
+- Implemented five REST handlers: GET all, GET by ID, POST, PUT, DELETE
+- Mounted in `index.js`
 
----
+### Step 6 — Connect the React frontend
+- Created `campaignApi.js` in the frontend with a `fetch` wrapper
+- Replaced sync Redux reducers with `createAsyncThunk` actions
+- Added `loading` and `error` to Redux state
+- Components now fetch/mutate data via the API
 
-## Step 6 — Connect the React frontend
-
-- Created `src/services/campaignApi.js` in the frontend — a thin `fetch` wrapper with a `request()` helper that handles JSON headers, non-OK responses, and `204 No Content`
-- Replaced sync Redux reducers (`saveCampaign`, `updateCampaign`, `removeCampaign`) with `createAsyncThunk` actions: `fetchCampaigns`, `createCampaign`, `updateCampaignAsync`, `deleteCampaign`
-- Added `loading` and `error` fields to Redux state
-- `emailList` dispatches `fetchCampaigns()` on mount and shows loading/error states
-- `createEmail` dispatches `createCampaign` or `updateCampaignAsync` on form submit
-- `emailRow` dispatches `deleteCampaign` on confirm delete
+### Step 7 — Replace fake DB with PostgreSQL + Prisma
+- Installed Prisma 7, `pg`, `@prisma/adapter-pg`, and `dotenv`
+- Defined `Campaign` model in `prisma/schema.prisma`
+- Ran `npx prisma migrate dev --name init` to create the table
+- Created `src/lib/prisma.js` — shared `PrismaClient` using the `pg` adapter (required by Prisma 7)
+- Rewrote `src/db/campaigns.js` to use async Prisma queries
+- Updated all routes to `async/await`
+- Created `prisma/seed.js` to populate sample data
 
 ---
 
 ## Next Steps
 
-- [ ] Replace fake DB with a real database (e.g. PostgreSQL / MongoDB)
-- [ ] Add authentication middleware
-- [ ] Add input validation (e.g. `zod` or `express-validator`)
+- [ ] Add authentication middleware (JWT)
+- [ ] Add input validation (`zod` or `express-validator`)
+- [ ] Deploy to production (Railway, Render, etc.)
