@@ -11,10 +11,10 @@ model Campaign {
   id            Int      @id @default(autoincrement())
   name          String
   subject       String
-  content       String?
+  content       String   @default("")
   status        Int      @default(1)
   emailType     Int      @default(1)
   ccEmails      String[] @default([])
-  manualEmails  String[] @default([])
+  manualEmails  String[]
   created       DateTime @default(now())
 }

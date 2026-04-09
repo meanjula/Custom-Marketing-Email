@@ -253,7 +253,10 @@
 }
 
 .snackbar.success { background: #2ecc71; color: #fff; }
-.snackbar.draft { background: #f39c12; color: #fff; }
+.snackbar.draft   { background: #f39c12; color: #fff; }
+.snackbar.error   { background: #e74c3c; color: #fff; align-items: flex-start; text-align: left; }
+.validation-error-list { margin: 6px 0 0 0; padding-left: 18px; font-size: 13px; }
+.validation-error-list li { margin-bottom: 2px; }
 
 @keyframes slideDown {
   from { opacity: 0; top: 0; }

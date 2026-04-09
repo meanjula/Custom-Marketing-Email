@@ -16,6 +16,7 @@ import {
   closeSnackbar,
   resetForm,
 } from '../../store/campaignSlice';
+import { campaignEmailValidate } from './validate';
 import CustomersEmailOption from './customersEmailOption.component';
 import TagInput from './TagInput';
 import TextEditor from '../inputs/textEditor';
@@ -43,6 +44,9 @@ export default function CreateEmailComponent() {
     reset,
     watch,
     setValue,
+    getValues,
+    setError,
+    clearErrors,
     formState: { errors },
   } = methods;
 
@@ -55,10 +59,10 @@ export default function CreateEmailComponent() {
         Name: isToCopy ? `${campaignDetails.name} (Copy)` : campaignDetails.name || '',
         Subject: campaignDetails.subject || '',
         emailType: campaignDetails.emailType ?? 0,
-        CcEmails: campaignDetails.CcEmails || [],
-        Content: campaignDetails.Content || '',
+        CcEmails: campaignDetails.ccEmails || [],
+        Content: campaignDetails.content || '',
         from_customers_email: campaignDetails.from_customers_email || [],
-        manual_emails: campaignDetails.manual_emails || [],
+        manual_emails: campaignDetails.manualEmails || [],
       });
     }
   }, [isToEdit, isToCopy, campaignDetails, reset]);
@@ -73,16 +77,38 @@ export default function CreateEmailComponent() {
     }
   }, [showSnackBar, showDraftSnackBar, dispatch, navigate]);
 
-  const onSubmit = (values) => {
+  const dispatchSave = (filteredValues) => {
     if (isToEdit && campaignDetails?.id && !isToCopy) {
-      dispatch(updateCampaignAsync({ ...values, id: campaignDetails.id }));
+      dispatch(updateCampaignAsync({ ...filteredValues, id: campaignDetails.id }));
     } else {
-      dispatch(createCampaign(values));
+      dispatch(createCampaign(filteredValues));
     }
   };
 
+  const onSubmit = () => {
+    const formValues = getValues();
+    const filteredValues = Object.fromEntries(
+      Object.entries(formValues).filter(([, value]) => value !== undefined)
+    );
+
+    if (!templateCreated) {
+      const { errors } = campaignEmailValidate(filteredValues);
+      if (Object.keys(errors).length > 0) {
+        Object.entries(errors).forEach(([field, message]) => setError(field, { message }));
+        return;
+      }
+    }
+
+    dispatchSave(filteredValues);
+  };
+
   const handleSaveAsDraft = () => {
+    const formValues = getValues();
+    const filteredValues = Object.fromEntries(
+      Object.entries(formValues).filter(([, value]) => value !== undefined)
+    );
     dispatch(saveCampaignEmailAsDraft());
+    dispatchSave(filteredValues);
   };
 
   const handleCancel = () => {
@@ -97,7 +123,7 @@ export default function CreateEmailComponent() {
     <FormProvider {...methods}>
       {(showSnackBar || showDraftSnackBar) && (
         <div className={`snackbar ${showDraftSnackBar ? 'draft' : 'success'}`}>
-          {showDraftSnackBar ? '📝 Draft saved successfully!' : '✅ Campaign sent successfully!'}
+          {showDraftSnackBar ? 'Draft saved successfully!' : 'Campaign sent successfully!'}
         </div>
       )}
 
@@ -214,8 +240,12 @@ export default function CreateEmailComponent() {
                     {!templateCreated ? (
                       <div className="form-field">
                         <TextEditor
+                          key={campaignDetails?.id ?? 'new'}
                           value={contentValue || ''}
-                          onChange={(html) => setValue('Content', html, { shouldDirty: true })}
+                          onChange={(html) => {
+                          setValue('Content', html, { shouldDirty: true });
+                          if (html?.replace(/<[^>]*>/g, '').trim()) clearErrors('Content');
+                        }}
                           placeholder="Write your email content here…"
                           height={420}
                         />
@@ -226,6 +256,9 @@ export default function CreateEmailComponent() {
                               : 0} characters
                           </span>
                         </div>
+                        {errors.Content && (
+                          <span className="field-error">{errors.Content.message}</span>
+                        )}
                       </div>
                     ) : (
                       <div className="template-saved-indicator">
@@ -280,7 +313,7 @@ export default function CreateEmailComponent() {
                   {submitLabel}
                 </button>
                 <button
-                  type="submit"
+                  type="button"
                   className="btn btn-secondary btn-full"
                   onClick={handleSaveAsDraft}
                 >

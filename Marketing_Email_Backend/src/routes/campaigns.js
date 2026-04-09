@@ -16,36 +16,53 @@ router.get('/:id', async (req, res) => {
   res.json(campaign);
 });
 
+function validateRecipients(status, emailType, manual_emails, from_customers_email) {
+  if (Number(status) !== 1) return null;
+  const type = Number(emailType);
+  if (type === 2 && !manual_emails?.length) return 'At least one recipient email is required';
+  if (type === 0 && !from_customers_email?.length) return 'At least one recipient must be selected';
+  return null;
+}
+
 // POST /api/campaigns
 router.post('/', async (req, res) => {
-  const { name, subject, content, emailType, CcEmails, manual_emails, status } = req.body;
-  if (!name || !subject) {
-    return res.status(400).json({ message: 'name and subject are required' });
-  }
+  const { name, subject, content, emailType, CcEmails, manual_emails, from_customers_email, status } = req.body;
+
+  if (!name?.trim()) return res.status(422).json({ message: 'Campaign name is required' });
+  if (!subject?.trim()) return res.status(422).json({ message: 'Email subject is required' });
+  const recipientError = validateRecipients(status, emailType, manual_emails, from_customers_email);
+  if (recipientError) return res.status(422).json({ message: recipientError });
+
   const campaign = await db.create({
     name,
     subject,
     content: content || '',
-    emailType: emailType ?? 1,
+    emailType: Number(emailType ?? 1),
     ccEmails: CcEmails ?? [],
     manualEmails: manual_emails ?? [],
-    status: status ?? 1,
+    status: Number(status ?? 1),
   });
   res.status(201).json(campaign);
 });
 
 // PUT /api/campaigns/:id
 router.put('/:id', async (req, res) => {
-  const { name, subject, content, emailType, CcEmails, manual_emails, status } = req.body;
+  const { name, subject, content, emailType, CcEmails, manual_emails, from_customers_email, status } = req.body;
+
+  if (!name?.trim()) return res.status(422).json({ message: 'Campaign name is required' });
+  if (!subject?.trim()) return res.status(422).json({ message: 'Email subject is required' });
+  const recipientError = validateRecipients(status, emailType, manual_emails, from_customers_email);
+  if (recipientError) return res.status(422).json({ message: recipientError });
+
   try {
     const updated = await db.update(req.params.id, {
       ...(name !== undefined && { name }),
       ...(subject !== undefined && { subject }),
       ...(content !== undefined && { content }),
-      ...(emailType !== undefined && { emailType }),
+      ...(emailType !== undefined && { emailType: Number(emailType) }),
       ...(CcEmails !== undefined && { ccEmails: CcEmails }),
       ...(manual_emails !== undefined && { manualEmails: manual_emails }),
-      ...(status !== undefined && { status }),
+      ...(status !== undefined && { status: Number(status) }),
     });
     res.json(updated);
   } catch {

@@ -10,29 +10,44 @@ export const fetchCampaigns = createAsyncThunk(
 
 export const createCampaign = createAsyncThunk(
   'campaign/create',
-  async (formValues, { getState }) => {
+  async (formValues, { getState, rejectWithValue }) => {
     const { isSaveNotificationEmailAsDraft } = getState().campaign;
-    const { Name, Subject, ...rest } = formValues;
-    return await campaignApi.create({
-      ...rest,
-      name: Name || '',
-      subject: Subject || '',
-      status: isSaveNotificationEmailAsDraft ? 0 : 1,
-    });
+    const { Name, Subject, Content, CcEmails, manual_emails, ...rest } = formValues;
+    console.log(Content)
+    try {
+      return await campaignApi.create({
+        ...rest,
+        name: Name || '',
+        subject: Subject || '',
+        content: Content || '',
+        ccEmails: CcEmails ?? [],
+        manual_emails: manual_emails ?? [],
+        status: isSaveNotificationEmailAsDraft ? 0 : 1,
+      });
+    } catch (err) {
+      return rejectWithValue({ message: err.message, errors: err.errors });
+    }
   }
 );
 
 export const updateCampaignAsync = createAsyncThunk(
   'campaign/update',
-  async (formValues, { getState }) => {
+  async (formValues, { getState, rejectWithValue }) => {
     const { isSaveNotificationEmailAsDraft } = getState().campaign;
-    const { Name, Subject, id, ...rest } = formValues;
-    return await campaignApi.update(id, {
-      ...rest,
-      name: Name || '',
-      subject: Subject || '',
-      status: isSaveNotificationEmailAsDraft ? 0 : 1,
-    });
+    const { Name, Subject, Content, CcEmails, manual_emails, id, ...rest } = formValues;
+    try {
+      return await campaignApi.update(id, {
+        ...rest,
+        name: Name || '',
+        subject: Subject || '',
+        content: Content || '',
+        ccEmails: CcEmails ?? [],
+        manual_emails: manual_emails ?? [],
+        status: isSaveNotificationEmailAsDraft ? 0 : 1,
+      });
+    } catch (err) {
+      return rejectWithValue({ message: err.message, errors: err.errors });
+    }
   }
 );
 
@@ -64,6 +79,7 @@ const initialState = {
   noTemplateValues: false,
   loading: false,
   error: null,
+  validationErrors: null,
 };
 
 const campaignSlice = createSlice({
@@ -103,6 +119,11 @@ const campaignSlice = createSlice({
       state.showFailSnackBar = false;
       state.showDraftSnackBar = false;
       state.isSaveNotificationEmailAsDraft = false;
+      state.validationErrors = null;
+    },
+
+    clearValidationErrors(state) {
+      state.validationErrors = null;
     },
 
     resetForm(state) {
@@ -147,7 +168,8 @@ const campaignSlice = createSlice({
       })
       .addCase(createCampaign.rejected, (state, action) => {
         state.showFailSnackBar = true;
-        state.error = action.error.message;
+        state.error = action.payload?.message ?? action.error.message;
+        state.validationErrors = action.payload?.errors ?? null;
       });
 
     // updateCampaignAsync
@@ -165,7 +187,8 @@ const campaignSlice = createSlice({
       })
       .addCase(updateCampaignAsync.rejected, (state, action) => {
         state.showFailSnackBar = true;
-        state.error = action.error.message;
+        state.error = action.payload?.message ?? action.error.message;
+        state.validationErrors = action.payload?.errors ?? null;
       });
 
     // deleteCampaign
@@ -188,6 +211,7 @@ export const {
   warnDelete,
   cancelDelete,
   closeSnackbar,
+  clearValidationErrors,
   resetForm,
 } = campaignSlice.actions;
 

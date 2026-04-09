@@ -65,7 +65,7 @@ App runs at `http://localhost:5173`
 
 **Step 2 — Recipients**
 - **Upload Excel** — `.xlsx / .xls / .csv` file upload area
-- **Enter Manually** — tag email input
+- **Enter Manually** — tag email input with format validation
 
 **Step 3 — Email Content**
 - TinyMCE rich text editor — bold, italic, headings, lists, links, colours, alignment, source view, fullscreen
@@ -77,10 +77,18 @@ App runs at `http://localhost:5173`
 - Live summary panel showing current field values
 
 **Actions**
-- Send Campaign — saves with `status: 1`
-- Save as Draft — saves with `status: 0`
+- Send Campaign — validates all required fields, saves with `status: 1`
+- Save as Draft — bypasses validation, saves with `status: 0`
 - Cancel — resets form and returns to dashboard
 - Success snackbar with auto-redirect
+
+### Validation (`validate.js`)
+- Runs on Send only — draft bypasses all checks
+- Required: Name, Subject, Content (strips HTML before checking)
+- Recipients: `emailType 2` requires at least one manual email; `emailType 0` requires at least one customer selected
+- Email format validated with `/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i`
+- Inline field errors shown below each input
+- Errors clear automatically as you type / add tags
 
 ---
 
@@ -93,8 +101,6 @@ src/
 │   └── campaignSlice.js                  # Slice — reducers + async thunks
 ├── services/
 │   └── campaignApi.js                    # Fetch wrapper for backend API
-├── data/
-│   └── fakeData.js                       # Seed data (customers only, campaigns from API)
 ├── components/
 │   ├── layout/
 │   │   ├── Header.jsx / Header.css
@@ -108,12 +114,12 @@ src/
 │       ├── createEmail.component.jsx     # Create/edit/copy form page
 │       ├── customersEmailOption.component.jsx  # Recipient selector
 │       ├── TagInput.jsx                  # Reusable tag/chip email input
+│       ├── validate.js                   # Campaign form validation logic
 │       └── CampaignEmail.css             # All campaign styles
 ├── containers/
 │   └── campaignEmail/
 │       ├── EmailListContainer.jsx
 │       └── campaignEmail.container.jsx
-├── context/                              # Legacy — no longer used
 └── App.jsx                               # Router setup
 ```
 
@@ -132,7 +138,6 @@ src/
   isToDeleteEmailId: null,
   showSnackBar: false,
   showDraftSnackBar: false,
-  showFailSnackBar: false,
   loading: false,             // API fetch in progress
   error: null,                // API error message
   template_content: '',
@@ -186,12 +191,14 @@ npm install @reduxjs/toolkit react-redux
 - Three-section layout: Campaign Details, Recipients, Email Content
 - Live summary sidebar using `watch()`
 - Send and Save as Draft actions
-- Edit/copy mode hydrates form from existing campaign data
+- Edit/copy mode hydrates form from existing campaign data via `reset()`
+- TinyMCE given a `key` prop tied to `campaignDetails?.id` so it remounts with correct content on edit/copy
 
 ### Step 6 — Build recipient selector (`customersEmailOption.component.jsx`)
 - Two modes: Excel file upload and manual email entry
-- Manual entry uses `TagInput.jsx` — a reusable chip input with email validation
+- Manual entry uses `TagInput` — reusable chip input with email format validation
 - Mode controlled by `emailType` radio field
+- `clearErrors` called on tag add so form errors clear as user types
 
 ### Step 7 — Add TinyMCE rich text editor (`textEditor.jsx`)
 - Integrated `@tinymce/tinymce-react` as a controlled component
@@ -222,8 +229,19 @@ npm install @reduxjs/toolkit react-redux
   - `updateCampaignAsync` — PUT update existing campaign
   - `deleteCampaign` — DELETE campaign
 - Added `loading` and `error` state fields
-- `emailList` shows loading/error states while fetching
+- `emailList` dispatches `fetchCampaigns()` on mount and shows loading/error states
 - `campaigns` state starts empty and is populated from the API
+- `createEmail` dispatches `createCampaign` or `updateCampaignAsync` on form submit
+- `emailRow` dispatches `deleteCampaign` on confirm delete
+- Thunks explicitly map PascalCase form fields (`Name`, `Subject`, `Content`, `CcEmails`) to API-expected casing
+
+### Step 11 — Frontend validation (`validate.js`)
+- Extracted all validation logic into `campaignEmailValidate(values)` in `validate.js`
+- Returns `{ values, errors }` — errors is an object keyed by field name
+- `onSubmit` calls `campaignEmailValidate`, sets errors via `setError`, and returns early if invalid
+- Save as Draft uses `type="button"` and calls `getValues()` directly — skips all validation
+- `dispatchSave` helper shared between send and draft to avoid duplication
+- Content error clears on TinyMCE `onChange`; recipient errors clear on tag add
 
 ---
 
@@ -235,6 +253,8 @@ npm install @reduxjs/toolkit react-redux
 - [x] TinyMCE rich text editor with image upload
 - [x] Redux Toolkit state management
 - [x] API integration (backend connected)
+- [x] Frontend validation with inline field errors
+- [ ] Excel file parsing — extract emails from uploaded file
 - [ ] Drag-and-drop email template builder
 - [ ] Email preview overlay
 - [ ] Authentication

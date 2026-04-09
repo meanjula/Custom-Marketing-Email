@@ -237,13 +237,132 @@ npm install --save-dev nodemon
 - Components now fetch/mutate data via the API
 
 ### Step 7 — Replace fake DB with PostgreSQL + Prisma
-- Installed Prisma 7, `pg`, `@prisma/adapter-pg`, and `dotenv`
-- Defined `Campaign` model in `prisma/schema.prisma`
-- Ran `npx prisma migrate dev --name init` to create the table
-- Created `src/lib/prisma.js` — shared `PrismaClient` using the `pg` adapter (required by Prisma 7)
-- Rewrote `src/db/campaigns.js` to use async Prisma queries
-- Updated all routes to `async/await`
-- Created `prisma/seed.js` to populate sample data
+
+#### Installed Prisma 7 and `dotenv`
+```bash
+  npm install prisma @prisma/client pg @prisma/adapter-pg
+  npm install --save-dev dotenv
+  ```
+  - prisma — the CLI tool. Used to run commands like migrate, generate, seed
+  - @prisma/client — the actual database client your code imports to run queries
+  - pg — the low-level PostgreSQL driver. It knows how to open a connection to Postgres and send SQL
+  - @prisma/adapter-pg — a bridge between Prisma 7 and pg. Prisma 7 no longer connects to the database directly — it needs an adapter to hand off the
+  connection
+  - dotenv — loads .env file variables into process.env so the app can read DATABASE_URL
+
+#### Defined Campaign model in prisma/schema.prisma
+```bash
+  model Campaign {
+    id            Int      @id @default(autoincrement())
+    name          String
+    subject       String
+    content       String?
+    status        Int      @default(1)
+    emailType     Int      @default(1)
+    ccEmails      String[] @default([])
+    manualEmails  String[] @default([])
+    created       DateTime @default(now())
+  }
+  ```
+
+  This file is the single source of truth for database structure. Each field maps to a column in PostgreSQL. Decorators like @id, @default,
+  @default(now()) tell Prisma how to set up the column constraints. String? means nullable. String[] is a PostgreSQL array.
+
+  #### Ran initial migration to create campaigns table
+
+  ```npx prisma migrate dev --name init```
+
+  Prisma read the schema, compared it to the database (which was empty), and generated a SQL file:
+
+  ```bash
+  CREATE TABLE "Campaign" (
+    "id" SERIAL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "subject" TEXT NOT NULL,
+    ...
+  );
+  ```
+
+  This SQL was saved in prisma/migrations/20260407_init/migration.sql and executed against the database. Every future schema change creates a new
+  migration file — so have a full history of every change ever made to the database.
+
+  #### Created src/lib/prisma.js as shared PrismaClient using pg adapter
+  ```bash
+  import pg from 'pg';
+  import { PrismaPg } from '@prisma/adapter-pg';
+  import { PrismaClient } from '../generated/prisma/index.js';
+
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg(pool);
+
+  export const prisma = new PrismaClient({ adapter });
+  ```
+
+  - pg.Pool — creates a connection pool. Instead of opening a new connection to Postgres on every request, it reuses existing ones (faster, more
+  efficient)
+  - PrismaPg — wraps the pool so Prisma knows how to use it
+  - PrismaClient({ adapter }) — creates the Prisma client wired to your actual database
+  - This file is a singleton — imported everywhere so only one pool/client exists for the whole app
+
+
+  #### Rewrote src/db/campaigns.js with async Prisma queries
+
+  Before (fake in-memory):
+  ```bash
+  export function getAll() {
+    return campaigns; // just returns an array
+  }
+  ```
+
+  After (Prisma):
+  ```bash
+  export async function getAll() {
+    return prisma.campaign.findMany({ orderBy: { created: 'desc' } });
+  }
+  ```
+
+  Every function is now async because database calls take time (network I/O). Prisma translates each method call to SQL:
+  - findMany → SELECT * FROM "Campaign" ORDER BY created DESC
+  - findUnique → SELECT * FROM "Campaign" WHERE id = $1
+  - create → INSERT INTO "Campaign" (...) VALUES (...)
+  - update → UPDATE "Campaign" SET ... WHERE id = $1
+  - delete → DELETE FROM "Campaign" WHERE id = $1
+
+  ---
+  #### Updated all routes to async/await
+
+  Before:
+  ```bash
+  router.get('/', (req, res) => {
+    res.json(db.getAll()); // returned array immediately
+  });
+  ```
+
+  After:
+  ```bash
+  router.get('/', async (req, res) => {
+    const campaigns = await db.getAll(); // wait for DB response
+    res.json(campaigns);
+  });
+  ```
+
+  #### Created prisma/seed.js to populate 5 sample campaigns
+  ```bash
+  await prisma.campaign.deleteMany(); // clear existing data
+  await prisma.campaign.createMany({ data: [...] }); // insert 5 records
+  ```
+
+
+
+  - deleteMany() with no filter deletes everything — clean slate every time you seed
+  - createMany() inserts all 5 records in a single SQL statement (efficient)
+  - Run with npm run seed whenever you want to reset the database back to the original 5 campaigns  
+
+### Step 8 Validation
+#### validateCampaign.js middleware
+  - status === 0 (draft) → skips all validation, saves immediately
+  - status === 1 (sent) → validates name, subject, content are non-empty, and if emailType === 2 checks manual_emails has at least one entry
+  - Returns 422 with { message, errors: { field: 'message' } } on failure
 
 ---
 

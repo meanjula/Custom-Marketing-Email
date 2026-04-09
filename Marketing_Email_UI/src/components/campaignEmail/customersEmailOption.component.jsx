@@ -4,7 +4,7 @@ import { HiOutlineDocument, HiOutlinePencilAlt, HiOutlineUpload } from 'react-ic
 import './CampaignEmail.css';
 
 function TagInput({ name, placeholder }) {
-  const { setValue, watch } = useFormContext();
+  const { setValue, watch, clearErrors } = useFormContext();
   const tags = watch(name) || [];
   const [inputVal, setInputVal] = useState('');
   const [error, setError] = useState('');
@@ -17,6 +17,7 @@ function TagInput({ name, placeholder }) {
     if (!isValidEmail(trimmed)) { setError('Enter a valid email address'); return; }
     if (tags.includes(trimmed)) { setError('Email already added'); return; }
     setValue(name, [...tags, trimmed]);
+    clearErrors(name);
     setInputVal('');
     setError('');
   };
@@ -58,7 +59,7 @@ function TagInput({ name, placeholder }) {
 }
 
 export default function CustomersEmailOption() {
-  const { watch, register } = useFormContext();
+  const { watch, register, formState: { errors } } = useFormContext();
   const emailType = Number(watch('emailType') ?? 1);
 
   return (
@@ -94,6 +95,9 @@ export default function CustomersEmailOption() {
           <div className="form-field">
             <label className="form-label">Enter Email Addresses</label>
             <TagInput name="manual_emails" placeholder="Type an email and press Enter…" />
+            {errors.manual_emails && (
+              <span className="field-error">{errors.manual_emails.message}</span>
+            )}
           </div>
         )}
       </div>
