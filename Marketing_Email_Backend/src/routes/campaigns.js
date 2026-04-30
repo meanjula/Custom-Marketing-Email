@@ -1,17 +1,19 @@
 import { Router } from 'express';
 import * as db from '../db/campaigns.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = Router();
+router.use(authenticate);
 
 // GET /api/campaigns
 router.get('/', async (req, res) => {
-  const campaigns = await db.getAll();
+  const campaigns = await db.getAll(req.userId);
   res.json(campaigns);
 });
 
 // GET /api/campaigns/:id
 router.get('/:id', async (req, res) => {
-  const campaign = await db.getById(req.params.id);
+  const campaign = await db.getById(req.params.id, req.userId);
   if (!campaign) return res.status(404).json({ message: 'Campaign not found' });
   res.json(campaign);
 });
@@ -41,6 +43,7 @@ router.post('/', async (req, res) => {
     ccEmails: CcEmails ?? [],
     manualEmails: manual_emails ?? [],
     status: Number(status ?? 1),
+    userId: req.userId,
   });
   res.status(201).json(campaign);
 });
@@ -55,7 +58,7 @@ router.put('/:id', async (req, res) => {
   if (recipientError) return res.status(422).json({ message: recipientError });
 
   try {
-    const updated = await db.update(req.params.id, {
+    const updated = await db.update(req.params.id, req.userId, {
       ...(name !== undefined && { name }),
       ...(subject !== undefined && { subject }),
       ...(content !== undefined && { content }),
@@ -73,7 +76,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/campaigns/:id
 router.delete('/:id', async (req, res) => {
   try {
-    await db.remove(req.params.id);
+    await db.remove(req.params.id, req.userId);
     res.status(204).send();
   } catch {
     res.status(404).json({ message: 'Campaign not found' });

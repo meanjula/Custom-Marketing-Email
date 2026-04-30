@@ -7,14 +7,24 @@ datasource db {
   provider = "postgresql"
 }
 
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique
+  password  String
+  campaigns Campaign[]
+  createdAt DateTime   @default(now())
+}
+
 model Campaign {
-  id            Int      @id @default(autoincrement())
-  name          String
-  subject       String
-  content       String   @default("")
-  status        Int      @default(1)
-  emailType     Int      @default(1)
-  ccEmails      String[] @default([])
-  manualEmails  String[]
-  created       DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String
+  subject      String
+  content      String   @default("")
+  status       Int      @default(1)
+  emailType    Int      @default(1)
+  ccEmails     String[] @default([])
+  manualEmails String[]
+  created      DateTime @default(now())
+  userId       Int?
+  user         User?    @relation(fields: [userId], references: [id])
 }

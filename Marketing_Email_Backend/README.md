@@ -14,18 +14,21 @@ Marketing_Email_Backend/
 ├── .env                        # Environment variables (git ignored)
 ├── .env.example                # Template for required env vars
 ├── prisma/
-│   ├── schema.prisma           # Database schema (Campaign model)
+│   ├── schema.prisma           # Database schema (User + Campaign models)
 │   ├── seed.js                 # Seed script — populates 5 sample campaigns
 │   └── migrations/             # Auto-generated SQL migration history
 └── src/
     ├── lib/
     │   └── prisma.js           # Shared Prisma client instance
     ├── db/
-    │   └── campaigns.js        # CRUD helpers using Prisma
+    │   └── campaigns.js        # CRUD helpers using Prisma (scoped by userId)
+    ├── middleware/
+    │   └── auth.js             # JWT authentication middleware
     ├── generated/
     │   └── prisma/             # Auto-generated Prisma client (do not edit)
     └── routes/
-        └── campaigns.js        # Campaign REST route handlers
+        ├── auth.js             # Register & login route handlers
+        └── campaigns.js        # Campaign REST route handlers (protected)
 ```
 
 ---
@@ -41,6 +44,8 @@ Marketing_Email_Backend/
 | `@prisma/client` | Auto-generated type-safe DB client |
 | `@prisma/adapter-pg` | Prisma adapter for PostgreSQL (required by Prisma 7) |
 | `pg` | PostgreSQL driver |
+| `jsonwebtoken` | Sign and verify JWT tokens |
+| `bcryptjs` | Hash and compare user passwords |
 | `dotenv` | Load `.env` variables |
 | `nodemon` | Auto-restart on file changes (dev only) |
 
@@ -67,10 +72,12 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env` with your PostgreSQL credentials:
+Edit `.env` with your PostgreSQL credentials and a JWT secret:
 
 ```env
 DATABASE_URL="postgresql://<user>@localhost:5432/marketing_email_db?schema=public"
+JWT_SECRET="your-long-random-secret-here"
+JWT_EXPIRES_IN="7d"
 ```
 
 ### 3. Create the database
@@ -114,16 +121,26 @@ Server runs at: `http://localhost:3000`
 ## Database Schema
 
 ```prisma
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique
+  password  String     // bcrypt hash
+  campaigns Campaign[]
+  createdAt DateTime   @default(now())
+}
+
 model Campaign {
-  id            Int      @id @default(autoincrement())
-  name          String
-  subject       String
-  content       String?
-  status        Int      @default(1)
-  emailType     Int      @default(1)
-  ccEmails      String[] @default([])
-  manualEmails  String[] @default([])
-  created       DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  name         String
+  subject      String
+  content      String   @default("")
+  status       Int      @default(1)
+  emailType    Int      @default(1)
+  ccEmails     String[] @default([])
+  manualEmails String[]
+  created      DateTime @default(now())
+  userId       Int?
+  user         User?    @relation(fields: [userId], references: [id])
 }
 ```
 
@@ -133,9 +150,20 @@ model Campaign {
 
 Base URL: `http://localhost:3000/api`
 
+### Auth (public)
+
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/campaigns` | Get all campaigns |
+| `POST` | `/api/auth/register` | Create a new account — returns a JWT token |
+| `POST` | `/api/auth/login` | Sign in — returns a JWT token |
+
+All campaign endpoints require a valid JWT. Pass it as a `Authorization: Bearer <token>` header.
+
+### Campaigns (protected)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/campaigns` | Get all campaigns for the authenticated user |
 | `GET` | `/api/campaigns/:id` | Get a single campaign by ID |
 | `POST` | `/api/campaigns` | Create a new campaign |
 | `PUT` | `/api/campaigns/:id` | Update an existing campaign |
@@ -145,7 +173,34 @@ Base URL: `http://localhost:3000/api`
 
 ### Request & Response Examples
 
+#### POST `/api/auth/register`
+Request body:
+```json
+{ "email": "user@example.com", "password": "password123" }
+```
+Response `201`:
+```json
+{
+  "token": "<jwt>",
+  "user": { "id": 1, "email": "user@example.com" }
+}
+```
+
+#### POST `/api/auth/login`
+Request body:
+```json
+{ "email": "user@example.com", "password": "password123" }
+```
+Response `200`:
+```json
+{
+  "token": "<jwt>",
+  "user": { "id": 1, "email": "user@example.com" }
+}
+```
+
 #### GET `/api/campaigns`
+Requires `Authorization: Bearer <token>` header.
 ```json
 [
   {
@@ -157,12 +212,14 @@ Base URL: `http://localhost:3000/api`
     "emailType": 1,
     "ccEmails": [],
     "manualEmails": [],
-    "created": "2026-04-07T11:05:59.681Z"
+    "created": "2026-04-07T11:05:59.681Z",
+    "userId": 1
   }
 ]
 ```
 
 #### POST `/api/campaigns`
+Requires `Authorization: Bearer <token>` header.
 
 Request body:
 ```json
@@ -184,7 +241,8 @@ Response `201`:
   "name": "New Campaign",
   "subject": "Hello World",
   "status": 0,
-  "created": "2026-04-07T11:10:00.000Z"
+  "created": "2026-04-07T11:10:00.000Z",
+  "userId": 1
 }
 ```
 
@@ -358,16 +416,54 @@ npm install --save-dev nodemon
   - createMany() inserts all 5 records in a single SQL statement (efficient)
   - Run with npm run seed whenever you want to reset the database back to the original 5 campaigns  
 
-### Step 8 Validation
+### Step 8 — Validation
 #### validateCampaign.js middleware
   - status === 0 (draft) → skips all validation, saves immediately
   - status === 1 (sent) → validates name, subject, content are non-empty, and if emailType === 2 checks manual_emails has at least one entry
   - Returns 422 with { message, errors: { field: 'message' } } on failure
 
+### Step 9 — JWT Authentication
+
+#### Installed packages
+```bash
+npm install jsonwebtoken bcryptjs
+```
+
+#### Added `User` model to `prisma/schema.prisma`
+- `email` — unique, used as the login identifier
+- `password` — stored as a bcrypt hash (never plain text)
+- `campaigns` — one-to-many relation to Campaign
+
+#### Added `userId` FK to `Campaign`
+- Nullable (`Int?`) so existing campaigns are not broken by the migration
+- All new campaigns are automatically linked to the authenticated user
+
+#### Ran migration
+```bash
+npx prisma migrate dev --name add_user_auth
+npx prisma generate
+```
+
+#### Created `src/routes/auth.js`
+- `POST /api/auth/register` — hashes password with bcrypt, creates user, returns signed JWT
+- `POST /api/auth/login` — looks up user by email, compares password hash, returns signed JWT
+- Both endpoints return `{ token, user: { id, email } }`
+
+#### Created `src/middleware/auth.js`
+- Reads `Authorization: Bearer <token>` header
+- Verifies the token with `jwt.verify`
+- Attaches `req.userId` for use in route handlers
+- Returns `401` if the header is missing or the token is invalid/expired
+
+#### Secured all campaign routes
+- Applied `authenticate` middleware to the entire campaign router
+- `getAll` and `getById` now filter by `req.userId`
+- `create` sets `userId: req.userId` on the new record
+- `update` and `remove` verify ownership before mutating
+
 ---
 
 ## Next Steps
 
-- [ ] Add authentication middleware (JWT)
 - [ ] Add input validation (`zod` or `express-validator`)
 - [ ] Deploy to production (Railway, Render, etc.)
