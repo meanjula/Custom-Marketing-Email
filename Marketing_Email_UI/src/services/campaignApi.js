@@ -25,4 +25,5 @@ export const campaignApi = {
   create: (data) => request('/campaigns', { method: 'POST', body: JSON.stringify(data) }),
   update: (id, data) => request(`/campaigns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   remove: (id) => request(`/campaigns/${id}`, { method: 'DELETE' }),
+  send: (id) => request(`/campaigns/${id}/send`, { method: 'POST' }),
 };

@@ -59,6 +59,17 @@ export const deleteCampaign = createAsyncThunk(
   }
 );
 
+export const sendCampaign = createAsyncThunk(
+  'campaign/send',
+  async (id, { rejectWithValue }) => {
+    try {
+      return await campaignApi.send(id);
+    } catch (err) {
+      return rejectWithValue({ message: err.message });
+    }
+  }
+);
+
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
 const initialState = {

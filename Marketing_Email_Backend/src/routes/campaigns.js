@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import * as db from '../db/campaigns.js';
 import { authenticate } from '../middleware/auth.js';
+import { sendCampaignEmail } from '../services/email.js';
 
 const router = Router();
 router.use(authenticate);
@@ -26,6 +27,21 @@ function validateRecipients(status, emailType, manual_emails, from_customers_ema
   return null;
 }
 
+async function trySendEmail(campaign) {
+  if (campaign.status !== 1) return;
+  if (!campaign.manualEmails?.length) return;
+  try {
+    await sendCampaignEmail({
+      to: campaign.manualEmails,
+      cc: campaign.ccEmails,
+      subject: campaign.subject,
+      html: campaign.content,
+    });
+  } catch (err) {
+    console.error('Email send failed:', err.message);
+  }
+}
+
 // POST /api/campaigns
 router.post('/', async (req, res) => {
   const { name, subject, content, emailType, CcEmails, manual_emails, from_customers_email, status } = req.body;
@@ -45,6 +61,8 @@ router.post('/', async (req, res) => {
     status: Number(status ?? 1),
     userId: req.userId,
   });
+
+  await trySendEmail(campaign);
   res.status(201).json(campaign);
 });
 
@@ -58,6 +76,9 @@ router.put('/:id', async (req, res) => {
   if (recipientError) return res.status(422).json({ message: recipientError });
 
   try {
+    const existing = await db.getById(req.params.id, req.userId);
+    if (!existing) return res.status(404).json({ message: 'Campaign not found' });
+
     const updated = await db.update(req.params.id, req.userId, {
       ...(name !== undefined && { name }),
       ...(subject !== undefined && { subject }),
@@ -67,6 +88,12 @@ router.put('/:id', async (req, res) => {
       ...(manual_emails !== undefined && { manualEmails: manual_emails }),
       ...(status !== undefined && { status: Number(status) }),
     });
+
+    // only send if transitioning from draft (0) → sent (1)
+    if (existing.status === 0 && updated.status === 1) {
+      await trySendEmail(updated);
+    }
+
     res.json(updated);
   } catch {
     res.status(404).json({ message: 'Campaign not found' });
